@@ -35,13 +35,25 @@ async function run() {
     app.get("/all-jobs", async (req, res) => {
       try {
         const cursor = await jobsCollection.find().toArray();
-        console.log(cursor);
         res.send(cursor);
       } catch (error) {
         console.log("error getting all jobdata: ", error.message);
         res.status(400).send(error.message);
       }
     });
+
+    app.get("/all-jobs/:id", async (req, res) => {
+        try {
+            const id = req.params.id;
+            console.log("Received _id:", id);
+            const query = {_id: new ObjectId(id)};
+            const result = await jobsCollection.findOne(query);
+            res.send(result);
+        } catch (error) {
+            console.log("error getting single jobdata: ", error.message);
+        res.status(400).send(error.message);
+        }
+    })
 
     app.post("/users", fileUpload, async (req, res) => {
       const user = req.body;
