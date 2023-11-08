@@ -31,7 +31,7 @@ async function run() {
   try {
 
     const usersCollection = client.db('usersDB').collection('users');
-
+    const jobsCollection = client.db('usersDB').collection('jobs');
 
     app.post("/users", fileUpload, async (req, res) => {
         const user = req.body;
@@ -43,7 +43,20 @@ async function run() {
             console.log("error posting data: ", error.message);
             res.status(400).send(error.message);
         }
-        
+    
+    })
+
+    app.post("/add-job", fileUpload, async (req, res) => {
+        const job = req.body;
+        job.applicantsNumber = parseInt(job.applicantsNumber);
+        console.log(job);
+        try {
+            const result = await jobsCollection.insertOne(job);
+        res.send(result);
+        } catch (error) {
+            console.log("error posting data: ", error.message);
+            res.status(400).send(error.message);
+        }
     
     })
     // Connect the client to the server	(optional starting in v4.7)
