@@ -106,6 +106,30 @@ async function run() {
       }
     });
 
+    app.delete("/my-jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await jobsCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.put("/my-jobs/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateJob = req.body;
+      const query = { _id: new ObjectId(id) };
+      const update = {
+        $set: {
+          title: updateJob.title,
+          description: updateJob.description,
+          location: updateJob.location,
+          salary: updateJob.salary,
+          applicantsNumber: updateJob.applicantsNumber,
+        },
+      };
+      const result = await jobsCollection.updateOne(query, update);
+      res.send(result);
+    });
+
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
