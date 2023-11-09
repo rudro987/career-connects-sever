@@ -116,18 +116,28 @@ async function run() {
     app.put("/my-jobs/:id", async (req, res) => {
       const id = req.params.id;
       const updateJob = req.body;
+      updateJob.applicantsNumber = parseInt(updateJob.applicantsNumber);
+
       const query = { _id: new ObjectId(id) };
-      const update = {
-        $set: {
-          title: updateJob.title,
-          description: updateJob.description,
-          location: updateJob.location,
-          salary: updateJob.salary,
-          applicantsNumber: updateJob.applicantsNumber,
-        },
-      };
-      const result = await jobsCollection.updateOne(query, update);
-      res.send(result);
+      try {
+        const result = await jobsCollection.updateOne(query, { $set: updateJob });
+        res.send(result);
+      } catch (error) {
+        console.error("Error updating job:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+      }
+      
+    //   const update = {
+    //     $set: {
+    //       title: updateJob.title,
+    //       description: updateJob.description,
+    //       location: updateJob.location,
+    //       salary: updateJob.salary,
+    //       applicantsNumber: updateJob.applicantsNumber,
+    //     },
+    //   };
+    //   const result = await jobsCollection.updateOne(query, update);
+      
     });
 
     // Connect the client to the server	(optional starting in v4.7)
