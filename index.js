@@ -31,6 +31,7 @@ async function run() {
   try {
     const usersCollection = client.db("usersDB").collection("users");
     const jobsCollection = client.db("usersDB").collection("jobs");
+    const appliedJobsCollection = client.db("usersDB").collection("appliedJobs");
 
     app.get("/all-jobs", async (req, res) => {
       try {
@@ -45,7 +46,6 @@ async function run() {
     app.get("/all-jobs/:id", async (req, res) => {
         try {
             const id = req.params.id;
-            console.log("Received _id:", id);
             const query = {_id: new ObjectId(id)};
             const result = await jobsCollection.findOne(query);
             res.send(result);
@@ -55,9 +55,10 @@ async function run() {
         }
     })
 
+    app.get("/applied-jobs")
+
     app.post("/users", fileUpload, async (req, res) => {
       const user = req.body;
-      console.log(user);
       try {
         const result = await usersCollection.insertOne(user);
         res.send(result);
@@ -70,7 +71,6 @@ async function run() {
     app.post("/add-job", fileUpload, async (req, res) => {
       const job = req.body;
       job.applicantsNumber = parseInt(job.applicantsNumber);
-      console.log(job);
       try {
         const result = await jobsCollection.insertOne(job);
         res.send(result);
@@ -79,6 +79,23 @@ async function run() {
         res.status(400).send(error.message);
       }
     });
+
+    app.post("/applied-jobs", async (req, res) => {
+        const appliedJob = req.body;
+      try {
+        const result = await appliedJobsCollection.insertOne(appliedJob);
+        const jobId = appliedJob.jobId;
+        const query = {_id: new ObjectId(jobId)};
+        const update = await jobsCollection.updateOne(query, {$inc: {applicantsNumber: 1}});
+        res.send(result);
+      } catch (error) {
+        console.log("error posting data: ", error.message);
+        res.status(400).send(error.message);
+      }
+    
+    })
+
+
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
