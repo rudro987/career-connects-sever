@@ -35,9 +35,18 @@ const client = new MongoClient(uri, {
   },
 });
 
-const logger = (req, res, next) => {
-  console.log(req.method, req.url);
-  next();
+const verifyToken = (req, res, next) => {
+  const token = req.cookies?.token;
+  if(!token){
+    return res.status(401).send({message: 'Unauthorized Access'});
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if(err){
+      return res.status(401).send({message: 'Forbidden Access'});
+    }
+    req.user = decoded;
+    next();
+  });
 }
 
 async function run() {
@@ -58,7 +67,7 @@ async function run() {
       }
     });
 
-    app.get("/all-jobs/:id", async (req, res) => {
+    app.get("/all-jobs/:id",verifyToken, async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
@@ -70,10 +79,13 @@ async function run() {
       }
     });
 
-    app.get("/applied-jobs", async (req, res) => {
-      console.log('cookie: ', req.cookies);
+    app.get("/applied-jobs", verifyToken, async (req, res) => {
       try {
-        const cursor = await appliedJobsCollection.find().toArray();
+        let query = {};
+        if(req.user?.email){
+          query = { email: req.user.email };
+        }
+        const cursor = await appliedJobsCollection.find(query).toArray();
         res.send(cursor);
       } catch (error) {
         console.log("error getting applied jobdata: ", error.message);
@@ -88,8 +100,7 @@ async function run() {
         httpOnly: true,
         secure: true,
         sameSite: 'none'
-      }).send({success: true});
-    
+      }).send({success: true});    
     });
 
     app.post('/logout', async(req, res) => {
