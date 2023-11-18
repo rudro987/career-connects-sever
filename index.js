@@ -11,7 +11,9 @@ const port = process.env.PORT || 5000;
 
 app.use(cors({
   origin: [
-    'http://localhost:5173'
+    'http://localhost:5173',
+    'https://career-connects.web.app',
+    'https://career-connects.firebaseapp.com'
   ],
   credentials: true,
 }));
@@ -35,19 +37,6 @@ const client = new MongoClient(uri, {
   },
 });
 
-const verifyToken = (req, res, next) => {
-  const token = req.cookies?.token;
-  if(!token){
-    return res.status(401).send({message: 'Unauthorized Access'});
-  }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if(err){
-      return res.status(401).send({message: 'Forbidden Access'});
-    }
-    req.user = decoded;
-    next();
-  });
-}
 
 async function run() {
   try {
@@ -67,10 +56,13 @@ async function run() {
       }
     });
 
-    app.get("/all-jobs/:id",verifyToken, async (req, res) => {
+    app.get("/all-jobs/:id", async (req, res) => {
       try {
         const id = req.params.id;
         const query = { _id: new ObjectId(id) };
+        if(req.query?.email !== req.user?.email){
+          return res.status(401).send({message: 'Unauthorized Access'});
+        };
         const result = await jobsCollection.findOne(query);
         res.send(result);
       } catch (error) {
@@ -79,10 +71,11 @@ async function run() {
       }
     });
 
-    app.get("/applied-jobs", verifyToken, async (req, res) => {
+    app.get("/applied-jobs", async (req, res) => {
       try {
+        console.log(req.query.email)
         let query = {};
-        if(req.user?.email){
+        if(req.query?.email === req.user?.email){
           query = { email: req.user.email };
         }
         const cursor = await appliedJobsCollection.find(query).toArray();
@@ -91,21 +84,6 @@ async function run() {
         console.log("error getting applied jobdata: ", error.message);
         res.status(400).send(error.message);
       }
-    });
-
-    app.post('/jwt', async(req, res) => {
-      const user = req.body;
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {expiresIn: '1h'});
-      res.cookie('token', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none'
-      }).send({success: true});    
-    });
-
-    app.post('/logout', async(req, res) => {
-      const user = req.body;
-      res.clearCookie('token', { maxAge: 0 }).send({success: true});
     });
 
     app.post("/users", fileUpload, async (req, res) => {
@@ -168,21 +146,10 @@ async function run() {
         res.status(500).json({ success: false, message: "Internal server error" });
       }
       
-    //   const update = {
-    //     $set: {
-    //       title: updateJob.title,
-    //       description: updateJob.description,
-    //       location: updateJob.location,
-    //       salary: updateJob.salary,
-    //       applicantsNumber: updateJob.applicantsNumber,
-    //     },
-    //   };
-    //   const result = await jobsCollection.updateOne(query, update);
-      
     });
 
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
